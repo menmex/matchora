@@ -108,6 +108,7 @@
         .db-table-row:hover { background: rgba(139,92,246,0.05); }
         .match-score-bar { transition: width 1s ease-out; }
     </style>
+<base target="_blank">
 </head>
 <body class="bg-gray-50 text-gray-900 dark:bg-gray-900 dark:text-gray-100 transition-colors duration-300">
 
@@ -1218,8 +1219,80 @@ function switchToLogin() { closeSignupModal(); setTimeout(openLoginModal, 300); 
 function switchToSignup() { closeLoginModal(); setTimeout(openSignupModal, 300); }
 
 // ==================== FORM HANDLERS ====================
-function handleSignup(e) { e.preventDefault(); showToast('Account created successfully! Welcome to Matchora.'); closeSignupModal(); }
-function handleLogin(e) { e.preventDefault(); showToast('Welcome back! You are now logged in.'); closeLoginModal(); }
+function handleSignup(e) {
+    e.preventDefault();
+    const form = e.target;
+    const email = form.querySelector('input[type="email"]').value;
+    const username = form.querySelector('input[type="text"]').value;
+    const password = form.querySelectorAll('input[type="password"]')[0].value;
+    const confirmPassword = form.querySelectorAll('input[type="password"]')[1].value;
+
+    if (password !== confirmPassword) {
+        showToast('Passwords do not match!');
+        return;
+    }
+
+    const userData = {
+        username: username,
+        email: email,
+        password: password,
+        ageRange: '21-25',
+        gender: 'prefer-not-to-say',
+        country: 'Nigeria'
+    };
+
+    fetch(`${API_BASE_URL}/auth/signup`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(userData)
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            authToken = data.token;
+            localStorage.setItem('matchora_auth_token', data.token);
+            currentUser = data.user;
+            showToast('Account created! Welcome, ' + data.user.anonymousName);
+            closeSignupModal();
+            updateAuthUI();
+        } else {
+            showToast(data.error || 'Signup failed');
+        }
+    })
+    .catch(err => {
+        console.error('Signup error:', err);
+        showToast('Network error. Please try again.');
+    });
+}
+function handleLogin(e) {
+    e.preventDefault();
+    const form = e.target;
+    const email = form.querySelector('input[type="email"]').value;
+    const password = form.querySelector('input[type="password"]').value;
+
+    fetch(`${API_BASE_URL}/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password })
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            authToken = data.token;
+            localStorage.setItem('matchora_auth_token', data.token);
+            currentUser = data.user;
+            showToast('Welcome back, ' + data.user.anonymousName + '!');
+            closeLoginModal();
+            updateAuthUI();
+        } else {
+            showToast(data.error || 'Login failed');
+        }
+    })
+    .catch(err => {
+        console.error('Login error:', err);
+        showToast('Network error. Please try again.');
+    });
+}
 
 function showToast(message) {
     const toast = document.getElementById('toast');
